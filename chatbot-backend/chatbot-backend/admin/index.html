@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BTZ.IO — Chatbot Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['Inter', 'sans-serif'] },
+      colors: {
+        brand:  { DEFAULT:'#075e54', light:'#128c7e', lighter:'#25d366', dark:'#054d44' },
+        surface:'#f7f8fa',
+      }
+    }}
+  }
+</script>
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #f0f2f5; }
+
+  /* Scrollbar fina */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+  /* Animações */
+  .fade-in  { animation: fadeIn .25s ease both; }
+  .slide-up { animation: slideUp .3s cubic-bezier(.175,.885,.32,1.275) both; }
+  @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Node card */
+  .node-card {
+    border-left: 4px solid #128c7e;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .node-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); transform: translateY(-1px); }
+  .node-card.type-image  { border-left-color: #6366f1; }
+  .node-card.type-audio  { border-left-color: #f59e0b; }
+  .node-card.type-ad     { border-left-color: #ef4444; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    transition: all .3s ease;
+  }
+
+  /* Tipo badge */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: .4px; padding: 2px 8px; border-radius: 9999px; }
+  .badge-text  { background: #d1fae5; color: #065f46; }
+  .badge-image { background: #ede9fe; color: #4c1d95; }
+  .badge-audio { background: #fef3c7; color: #92400e; }
+  .badge-ad    { background: #fee2e2; color: #991b1b; }
+
+  /* Connector line visual */
+  .connector-pill { font-size: 11px; color: #64748b; background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 2px 8px; display: inline-block; }
+
+  /* Flow header gradient */
+  .flow-header { background: linear-gradient(135deg, #075e54 0%, #128c7e 100%); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ══ TOP NAV ══════════════════════════════════════════════════════════ -->
+<nav class="bg-brand shadow-lg sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-brand-lighter rounded-lg flex items-center justify-center text-brand font-bold text-sm">B</div>
+      <span class="text-white font-semibold tracking-wide">BTZ.IO <span class="text-brand-lighter">Chatbot</span></span>
+    </div>
+    <button onclick="showCreateFlow()" class="flex items-center gap-2 bg-brand-lighter hover:bg-green-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Novo Fluxo
+    </button>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════════════════ -->
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+  <!-- Views -->
+  <div id="view-list">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-800">Meus Fluxos</h1>
+      <p class="text-gray-500 text-sm mt-1">Crie e gerencie os fluxos do chatbot</p>
+    </div>
+    <div id="flows-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="col-span-full text-center py-16 text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        Nenhum fluxo ainda. Crie o primeiro!
+      </div>
+    </div>
+  </div>
+
+  <!-- Editor de fluxo -->
+  <div id="view-editor" class="hidden">
+    <!-- Header do editor -->
+    <div class="flow-header rounded-2xl p-6 mb-6 text-white shadow-lg">
+      <button onclick="backToList()" class="flex items-center gap-1 text-green-300 hover:text-white text-sm mb-4 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Voltar
+      </button>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 id="editor-flow-name" class="text-2xl font-bold"></h2>
+          <p id="editor-flow-desc" class="text-green-200 text-sm mt-1"></p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="addNode()" class="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Adicionar nó
+          </button>
+          <button onclick="saveFlow()" id="btn-save" class="flex items-center gap-2 bg-brand-lighter hover:bg-green-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            Salvar
+          </button>
+          <button onclick="exportFlow()" class="flex items-center gap-2 bg-white text-brand hover:bg-green-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Exportar ZIP
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info de uso -->
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3 text-sm text-blue-700">
+      <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+      <div><strong>Dica:</strong> O primeiro nó da lista é o início do fluxo. Use <strong>Avança para</strong> em nós sem botões (ex.: <strong>Anúncio</strong>). Com opções, cada botão leva ao <code>key</code> indicado. Para o fluxo Enzo com anúncios, rode <code>php seed-flow-enzo-cartao.php</code> na pasta do backend ou adicione nós <strong>📢 Anúncio</strong> entre as etapas e salve.</div>
+    </div>
+
+    <!-- Lista de nós -->
+    <div id="nodes-list" class="space-y-3"></div>
+
+    <!-- Empty state -->
+    <div id="nodes-empty" class="hidden text-center py-16 text-gray-400">
+      <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Nenhum nó ainda. Clique em "Adicionar nó".
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL — Criar Fluxo ══════════════════════════════════════════════ -->
+<div id="modal-create" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md slide-up">
+    <div class="p-6">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Novo Fluxo</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nome do fluxo *</label>
+          <input id="inp-flow-name" type="text" placeholder="Ex: Atendimento Benefícios"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+          <input id="inp-flow-desc" type="text" placeholder="Opcional"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeCreateFlow()" class="flex-1 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Cancelar</button>
+        <button onclick="createFlow()" class="flex-1 bg-brand hover:bg-brand-dark text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Criar Fluxo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL — Adicionar/Editar Nó ══════════════════════════════════════ -->
+<div id="modal-node" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4 slide-up">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-gray-800" id="modal-node-title">Novo Nó</h3>
+        <button onclick="closeNodeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Campos básicos -->
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Identificador *</label>
+            <input id="inp-node-key" type="text" placeholder="n_boas_vindas"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+            <select id="inp-node-type" onchange="onTypeChange()"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+              <option value="text">💬 Texto</option>
+              <option value="image">🖼 Imagem</option>
+              <option value="audio">🎵 Áudio</option>
+              <option value="ad">📢 Anúncio</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Conteúdo dinâmico por tipo -->
+        <div id="field-text">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
+          <textarea id="inp-node-content" rows="3" placeholder="Olá! Como posso te ajudar?"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"></textarea>
+        </div>
+        <div id="field-media" class="hidden space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">URL do arquivo</label>
+            <input id="inp-node-url" type="text" placeholder="https://..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ou envie um arquivo</label>
+            <input id="inp-node-upload" type="file" accept="image/*,audio/*" onchange="uploadFileToField(this, 'inp-node-url')"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"/>
+            <p class="text-xs text-gray-400 mt-1">O arquivo sera convertido em Data URL para salvar no fluxo.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Legenda</label>
+            <input id="inp-node-caption" type="text" placeholder="Legenda opcional"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
+          </div>
+        </div>
+        <div id="field-ad" class="hidden">
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+            Este nó usa anúncio automático do Google Ad Manager. Não é necessário preencher título, subtítulo ou imagem.
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Delay (ms)</label>
+            <input id="inp-node-delay" type="number" value="800" min="200" max="5000" step="100"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
+          </div>
+          <div id="field-next-wrap">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Avança para (key)</label>
+            <input id="inp-node-next" type="text" placeholder="n_proximo"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
+          </div>
+        </div>
+
+        <!-- Opções (botões de escolha) -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-medium text-gray-700">Opções (botões)</label>
+            <button onclick="addOption()" class="text-xs text-brand hover:text-brand-dark font-medium flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Adicionar
+            </button>
+          </div>
+          <div id="options-editor" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">Se houver opções, "Avança para" é ignorado</p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeNodeModal()" class="flex-1 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
+        <button onclick="saveNode()" class="flex-1 bg-brand hover:bg-brand-dark text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">Salvar nó</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div id="toast" class="hidden">
+  <div id="toast-inner" class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white"></div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG — ajuste para seu backend
+// ============================================================
+// Em localhost, hostname pode ser "localhost", "127.0.0.1" ou "[::1]" (IPv6).
+// Se a condição falhar, API virava ".." e o fetch ia para a URL errada → "Erro ao criar fluxo".
+function resolveApiBase() {
+  const h = window.location.hostname;
+  const proto = window.location.protocol === 'https:' ? 'https:' : 'http:';
+  const loopback =
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h === '[::1]' ||
+    h === '::1' ||
+    h === ''; // file://
+  if (loopback) {
+    // IMPORTANTE: usar o MESMO host da página (localhost vs 127.0.0.1).
+    // `php -S localhost:8000` costuma escutar em localhost/IPv6; fetch em 127.0.0.1:8000 falha (connection refused).
+    // localhost e 127.0.0.1 são origens diferentes para CORS — API e página devem alinhar o host.
+    let host = 'localhost';
+    if (h === '127.0.0.1') host = '127.0.0.1';
+    else if (h === 'localhost') host = 'localhost';
+    else if (h === '[::1]' || h === '::1') host = 'localhost';
+    return `${proto}//${host}:8000`;
+  }
+  try {
+    return new URL('..', window.location.href).origin;
+  } catch (e) {
+    return 'http://localhost:8000';
+  }
+}
+const API = resolveApiBase();
+
+// ============================================================
+// STATE
+// ============================================================
+let flows       = [];
+let currentFlow = null;
+let nodes       = [];    // array de nós em memória
+let editingIdx  = null;  // índice do nó sendo editado
+
+// ============================================================
+// INIT
+// ============================================================
+loadFlows();
+
+// ============================================================
+// FLOWS — Lista
+// ============================================================
+async function loadFlows() {
+  try {
+    const r = await fetch(`${API}/api/flows`);
+    const j = await r.json();
+    flows = j.data || [];
+    renderFlowsGrid();
+  } catch(e) {
+    toast('Erro ao conectar na API', 'error');
+  }
+}
+
+function renderFlowsGrid() {
+  const grid = document.getElementById('flows-grid');
+  if (!flows.length) {
+    grid.innerHTML = `
+      <div class="col-span-full text-center py-16 text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        Nenhum fluxo ainda. Crie o primeiro!
+      </div>`;
+    return;
+  }
+  grid.innerHTML = flows.map(f => `
+    <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-5 cursor-pointer group fade-in" onclick="openFlow(${f.id})">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand font-bold text-lg">
+          ${f.name.charAt(0).toUpperCase()}
+        </div>
+        <span class="text-xs text-gray-400">${formatDate(f.updated_at)}</span>
+      </div>
+      <h3 class="font-semibold text-gray-800 group-hover:text-brand transition-colors">${esc(f.name)}</h3>
+      <p class="text-sm text-gray-400 mt-0.5 truncate">${esc(f.description || 'Sem descrição')}</p>
+      <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+        <span class="text-xs text-gray-400">${f.node_count || 0} nós</span>
+        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onclick="event.stopPropagation();exportFlowById(${f.id})"
+            class="text-xs text-brand hover:underline font-medium">Exportar ZIP</button>
+          <button onclick="event.stopPropagation();deleteFlow(${f.id})"
+            class="text-xs text-red-500 hover:underline font-medium">Excluir</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// FLOW — CRUD
+// ============================================================
+function showCreateFlow() {
+  document.getElementById('modal-create').classList.remove('hidden');
+  setTimeout(() => document.getElementById('inp-flow-name').focus(), 50);
+}
+function closeCreateFlow() {
+  document.getElementById('modal-create').classList.add('hidden');
+  document.getElementById('inp-flow-name').value = '';
+  document.getElementById('inp-flow-desc').value = '';
+}
+
+async function createFlow() {
+  const name = document.getElementById('inp-flow-name').value.trim();
+  const desc = document.getElementById('inp-flow-desc').value.trim();
+  if (!name) { toast('Informe o nome do fluxo', 'error'); return; }
+
+  try {
+    const r = await fetch(`${API}/api/flows`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, description: desc })
+    });
+    let j = {};
+    try { j = await r.json(); } catch (parseErr) {
+      toast('Resposta inválida da API', 'error');
+      return;
+    }
+    if (!r.ok) {
+      toast(j.error || ('HTTP ' + r.status), 'error');
+      return;
+    }
+    if (!j.data || j.data.id == null) {
+      toast('API não retornou o fluxo criado', 'error');
+      return;
+    }
+    closeCreateFlow();
+    await loadFlows();
+    openFlow(j.data.id);
+    toast('Fluxo criado!', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao criar fluxo (rede/CORS). API: ' + API, 'error');
+  }
+}
+
+async function deleteFlow(id) {
+  if (!confirm('Excluir este fluxo? Esta ação não pode ser desfeita.')) return;
+  await fetch(`${API}/api/flows/${id}`, { method: 'DELETE' });
+  await loadFlows();
+  toast('Fluxo excluído', 'success');
+}
+
+async function openFlow(id) {
+  try {
+    const r = await fetch(`${API}/api/flows/${id}`);
+    const j = await r.json();
+    currentFlow = j.data;
+
+    // Normaliza nós do banco para formato local
+    nodes = (currentFlow.nodes || []).map(n => {
+      const node = {
+        key:     n.node_key,
+        type:    n.type,
+        content: n.content || '',
+        caption: n.caption || '',
+        delay:   n.delay_ms || 800,
+        next:    '',
+        options: (n.options || []).map(o => ({
+          label: o.label,
+          next:  o.next || o.next_key || '',
+        })),
+      };
+      if (node.type === 'ad') {
+        let ad = {};
+        try { ad = JSON.parse(node.content || '{}') || {}; } catch (e) { ad = {}; }
+        node.adTitle = ad.title || '';
+        node.adSub   = ad.sub || '';
+        node.adImage = ad.image || '';
+      }
+      return node;
+    });
+
+    // Próximo nó linear (texto sem opções, anúncios, etc.): API não grava edge só para "next" implícito
+    const keys = nodes.map(n => n.key);
+    const edgeList = currentFlow.edges || [];
+    nodes.forEach((node, i) => {
+      const from = node.key;
+      const outs = edgeList
+        .filter(e => (e.from_key || e.from) === from)
+        .map(e => e.to_key || e.to)
+        .filter(Boolean);
+      if (!node.options || node.options.length === 0) {
+        if (outs.length === 1) node.next = outs[0];
+        else if (keys[i + 1]) node.next = keys[i + 1];
+      }
+    });
+
+    document.getElementById('editor-flow-name').textContent = currentFlow.name;
+    document.getElementById('editor-flow-desc').textContent = currentFlow.description || '';
+    document.getElementById('view-list').classList.add('hidden');
+    document.getElementById('view-editor').classList.remove('hidden');
+    renderNodes();
+  } catch(e) { toast('Erro ao abrir fluxo', 'error'); }
+}
+
+function backToList() {
+  document.getElementById('view-editor').classList.add('hidden');
+  document.getElementById('view-list').classList.remove('hidden');
+  currentFlow = null;
+  nodes = [];
+  loadFlows();
+}
+
+// ============================================================
+// NODES — Render
+// ============================================================
+const TYPE_ICON = { text:'💬', image:'🖼', audio:'🎵', ad:'📢' };
+const TYPE_LABEL= { text:'Texto', image:'Imagem', audio:'Áudio', ad:'Anúncio' };
+
+function renderNodes() {
+  const list  = document.getElementById('nodes-list');
+  const empty = document.getElementById('nodes-empty');
+
+  if (!nodes.length) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  list.innerHTML = nodes.map((n, i) => `
+    <div class="bg-white rounded-2xl shadow-sm node-card type-${n.type} p-4 fade-in" id="node-${i}">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">${TYPE_ICON[n.type]||'💬'}</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <code class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">${esc(n.key)}</code>
+              <span class="badge badge-${n.type}">${TYPE_LABEL[n.type]||n.type}</span>
+              ${i===0 ? '<span class="badge" style="background:#fef9c3;color:#713f12">▶ Início</span>' : ''}
+            </div>
+            <p class="text-sm text-gray-600 mt-1 line-clamp-1">${esc(previewContent(n))}</p>
+          </div>
+        </div>
+        <div class="flex gap-1 ml-2">
+          ${i>0 ? `<button onclick="moveNode(${i},-1)" title="Mover para cima" class="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg></button>` : ''}
+          ${i<nodes.length-1 ? `<button onclick="moveNode(${i},1)" title="Mover para baixo" class="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button>` : ''}
+          <button onclick="editNode(${i})" class="p-1.5 text-brand hover:text-brand-dark rounded-lg hover:bg-green-50 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+          <button onclick="removeNode(${i})" class="p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+        </div>
+      </div>
+
+      ${n.options && n.options.length ? `
+      <div class="mt-3 flex flex-wrap gap-2">
+        ${n.options.map(o => `
+          <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+            <span class="text-xs font-medium text-gray-700">${esc(o.label)}</span>
+            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            <code class="text-xs text-brand font-mono">${esc(o.next)}</code>
+          </div>
+        `).join('')}
+      </div>` : n.next ? `
+      <div class="mt-3 flex items-center gap-1 text-xs text-gray-500">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Avança para: <code class="text-brand ml-1 font-mono">${esc(n.next)}</code>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+function previewContent(n) {
+  if (n.type === 'ad') return '(anúncio automático)';
+  if (n.type === 'image' || n.type === 'audio') return n.caption || n.content || '(mídia)';
+  return n.content || '(sem conteúdo)';
+}
+
+function moveNode(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= nodes.length) return;
+  [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+  renderNodes();
+}
+
+function removeNode(i) {
+  if (!confirm(`Remover o nó "${nodes[i].key}"?`)) return;
+  nodes.splice(i, 1);
+  renderNodes();
+}
+
+// ============================================================
+// NODE MODAL
+// ============================================================
+function addNode() {
+  editingIdx = null;
+  clearNodeModal();
+  document.getElementById('modal-node-title').textContent = 'Novo Nó';
+  document.getElementById('modal-node').classList.remove('hidden');
+  setTimeout(() => document.getElementById('inp-node-key').focus(), 50);
+}
+
+function editNode(i) {
+  editingIdx = i;
+  const n = nodes[i];
+  document.getElementById('modal-node-title').textContent = 'Editar Nó';
+  document.getElementById('inp-node-key').value   = n.key;
+  document.getElementById('inp-node-type').value  = n.type;
+  document.getElementById('inp-node-delay').value = n.delay || 800;
+  document.getElementById('inp-node-next').value  = n.next || '';
+
+  if (n.type === 'text') {
+    document.getElementById('inp-node-content').value = n.content || '';
+  } else if (n.type === 'image' || n.type === 'audio') {
+    document.getElementById('inp-node-url').value     = n.content || '';
+    document.getElementById('inp-node-caption').value = n.caption || '';
+  }
+
+  onTypeChange();
+
+  // Opções
+  const ed = document.getElementById('options-editor');
+  ed.innerHTML = '';
+  (n.options || []).forEach(o => addOptionRow(o.label, o.next));
+
+  document.getElementById('modal-node').classList.remove('hidden');
+}
+
+function closeNodeModal() {
+  document.getElementById('modal-node').classList.add('hidden');
+  editingIdx = null;
+}
+
+function clearNodeModal() {
+  ['inp-node-key','inp-node-content','inp-node-url','inp-node-caption',
+   'inp-node-next'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['inp-node-upload'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('inp-node-type').value  = 'text';
+  document.getElementById('inp-node-delay').value = '800';
+  document.getElementById('options-editor').innerHTML = '';
+  onTypeChange();
+}
+
+function onTypeChange() {
+  const type = document.getElementById('inp-node-type').value;
+  document.getElementById('field-text').classList.toggle('hidden',  type !== 'text');
+  document.getElementById('field-media').classList.toggle('hidden', type !== 'image' && type !== 'audio');
+  document.getElementById('field-ad').classList.toggle('hidden',    type !== 'ad');
+}
+
+function addOption() { addOptionRow('', ''); }
+
+function addOptionRow(label='', next='') {
+  const ed = document.getElementById('options-editor');
+  const row = document.createElement('div');
+  row.className = 'flex items-center gap-2';
+  row.innerHTML = `
+    <input type="text" placeholder="Label do botão" value="${esc(label)}"
+      class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand opt-label"/>
+    <input type="text" placeholder="Vai para (key)" value="${esc(next)}"
+      class="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand opt-next font-mono"/>
+    <button onclick="this.parentElement.remove()" class="p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 flex-shrink-0">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>`;
+  ed.appendChild(row);
+  row.querySelector('.opt-label').focus();
+}
+
+function saveNode() {
+  const key  = document.getElementById('inp-node-key').value.trim().replace(/\s+/g,'_');
+  const type = document.getElementById('inp-node-type').value;
+  const delay= parseInt(document.getElementById('inp-node-delay').value) || 800;
+  const next = document.getElementById('inp-node-next').value.trim();
+
+  if (!key) { toast('Informe o identificador do nó', 'error'); return; }
+
+  // Valida chave única
+  const exists = nodes.findIndex(n => n.key === key);
+  if (exists !== -1 && exists !== editingIdx) { toast('Já existe um nó com este identificador', 'error'); return; }
+
+  const node = { key, type, delay, next, options: [] };
+
+  if (type === 'text') {
+    node.content = document.getElementById('inp-node-content').value.trim();
+  } else if (type === 'image' || type === 'audio') {
+    node.content = document.getElementById('inp-node-url').value.trim();
+    node.caption = document.getElementById('inp-node-caption').value.trim();
+  } else if (type === 'ad') {
+    // Ad automatico: apenas o tipo "ad" no flow ja dispara o slot GPT no chat.
+    node.content = '';
+  }
+
+  // Opções
+  document.querySelectorAll('#options-editor > div').forEach(row => {
+    const label = row.querySelector('.opt-label').value.trim();
+    const nx    = row.querySelector('.opt-next').value.trim();
+    if (label) node.options.push({ label, next: nx });
+  });
+
+  if (editingIdx !== null) nodes[editingIdx] = node;
+  else nodes.push(node);
+
+  closeNodeModal();
+  renderNodes();
+  toast('Nó salvo!', 'success');
+}
+
+// ============================================================
+// SAVE FLOW (para o banco)
+// ============================================================
+async function saveFlow() {
+  if (!currentFlow) return;
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const edges = [];
+  nodes.forEach(n => {
+    if (n.next) edges.push({ from: n.key, to: n.next });
+    n.options.forEach(o => { if(o.next) edges.push({ from: n.key, to: o.next }); });
+  });
+
+  try {
+    const r = await fetch(`${API}/api/flows/${currentFlow.id}/nodes`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ nodes, edges })
+    });
+    const j = await r.json();
+    if (j.success) toast(`✓ ${j.saved} nós salvos!`, 'success');
+    else toast('Erro ao salvar', 'error');
+  } catch(e) { toast('Erro de conexão', 'error'); }
+
+  btn.disabled = false;
+  btn.textContent = 'Salvar';
+}
+
+// ============================================================
+// EXPORT ZIP
+// ============================================================
+async function exportFlow() {
+  if (!currentFlow) return;
+  await saveFlow();
+  exportFlowById(currentFlow.id);
+}
+
+function exportFlowById(id) {
+  toast('Gerando ZIP...', 'info');
+  window.location.href = `${API}/api/flows/${id}/export`;
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  return new Date(str).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+function uploadFileToField(input, targetId) {
+  const file = input && input.files ? input.files[0] : null;
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.value = String(reader.result || '');
+      toast('Arquivo carregado no campo.', 'success');
+    }
+  };
+  reader.onerror = () => toast('Falha ao ler o arquivo.', 'error');
+  reader.readAsDataURL(file);
+}
+
+let toastTimer;
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  const inner = document.getElementById('toast-inner');
+  const colors = { success:'bg-green-600', error:'bg-red-500', info:'bg-blue-500' };
+  inner.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white ${colors[type]||'bg-gray-700'}`;
+  inner.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+// Enter nos modals
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeNodeModal(); closeCreateFlow(); }
+});
+</script>
+</body>
+</html>

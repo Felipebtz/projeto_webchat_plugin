@@ -1,0 +1,91 @@
+{
+  "start": "n_start",
+  "nodes": {
+    "n_start": {
+      "type": "text",
+      "delay": 800,
+      "content": "Olá, tudo bem? Sou o Enzo e vou fazer uma análise para aprovar o seu cartão de crédito.\n\nVocê já possui um cartão de crédito?",
+      "options": [
+        { "label": "Sim", "next": "n_ads1" },
+        { "label": "Não", "next": "n_ads1" }
+      ]
+    },
+    "n_ads1": {
+      "type": "ad",
+      "delay": 800,
+      "next": "n_idade"
+    },
+    "n_idade": {
+      "type": "text",
+      "delay": 800,
+      "content": "Qual é a sua faixa de idade?",
+      "options": [
+        { "label": "Menos de 18 anos", "next": "n_ads2" },
+        { "label": "18 a 24 anos", "next": "n_ads2" },
+        { "label": "25 a 59 anos", "next": "n_ads2" },
+        { "label": "60 anos ou mais", "next": "n_ads2" }
+      ]
+    },
+    "n_ads2": {
+      "type": "ad",
+      "delay": 800,
+      "next": "n_profissao"
+    },
+    "n_profissao": {
+      "type": "text",
+      "delay": 800,
+      "content": "Qual é a sua situação profissional?",
+      "options": [
+        { "label": "Trabalho com carteira assinada", "next": "n_finalidade" },
+        { "label": "Trabalhador autônomo", "next": "n_finalidade" },
+        { "label": "Empresário", "next": "n_finalidade" },
+        { "label": "Desempregado", "next": "n_finalidade" },
+        { "label": "Outro", "next": "n_finalidade" }
+      ]
+    },
+    "n_finalidade": {
+      "type": "text",
+      "delay": 800,
+      "content": "Qual será a finalidade de uso do cartão?",
+      "options": [
+        { "label": "Fazer compras", "next": "n_ads3" },
+        { "label": "Pagar contas", "next": "n_ads3" },
+        { "label": "Uso diário", "next": "n_ads3" },
+        { "label": "Fazer uma viagem", "next": "n_ads3" },
+        { "label": "Outro", "next": "n_ads3" }
+      ]
+    },
+    "n_ads3": {
+      "type": "ad",
+      "delay": 800,
+      "next": "n_preaprovacao"
+    },
+    "n_preaprovacao": {
+      "type": "text",
+      "delay": 800,
+      "content": "Perfeito. Concluí a análise e consegui uma pré-aprovação para você.\n\nEscolha o limite do seu cartão:",
+      "options": [
+        { "label": "R$ 1.000", "next": "n_parabens" },
+        { "label": "R$ 3.000", "next": "n_parabens" },
+        { "label": "R$ 5.000", "next": "n_parabens" },
+        { "label": "R$ 10.000", "next": "n_parabens" }
+      ]
+    },
+    "n_parabens": {
+      "type": "text",
+      "delay": 800,
+      "content": "Parabéns pelo seu novo cartão! Para continuar, clique no botão abaixo e acesse nosso site para finalizar a solicitação.",
+      "options": [
+        { "label": "Solicitar meu cartão", "next": "n_fim" }
+      ]
+    },
+    "n_fim": {
+      "type": "text",
+      "delay": 800,
+      "content": "Obrigado! Você pode finalizar a solicitação pelo site ou falar com um consultor. Deseja recomeçar o atendimento?",
+      "options": [
+        { "label": "Recomeçar conversa", "next": "__restart" }
+      ]
+    }
+  }
+}
